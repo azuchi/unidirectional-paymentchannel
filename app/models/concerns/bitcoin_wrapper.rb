@@ -10,6 +10,10 @@ module Concerns::BitcoinWrapper
     @btc_provider ||= BitcoinProvider.new(btc_config)
   end
 
+  def new_pubkey
+
+  end
+
   class BitcoinProvider
 
     attr_reader :config
