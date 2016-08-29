@@ -41,6 +41,7 @@ GEM
     airbrussh (1.1.0)
       sshkit (>= 1.6.1, != 1.7.0)
     arel (7.1.1)
+    bitcoin-ruby (0.0.9)
     builder (3.2.2)
     byebug (9.0.5)
     capistrano (3.6.1)
@@ -207,6 +208,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  bitcoin-ruby
   byebug
   capistrano
   capistrano-bundler
