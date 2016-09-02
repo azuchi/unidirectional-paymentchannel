@@ -1,6 +1,7 @@
 class Key < ApplicationRecord
 
   before_create :setup_key
+  has_one :payment_channel
 
   private
   def setup_key
