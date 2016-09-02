@@ -1,3 +1,3 @@
 include Concerns::BitcoinWrapper
 
-Bitcoin.network = btc_config[:bitcoin][:network]
+Bitcoin.network = oa_config[:bitcoin][:network]
