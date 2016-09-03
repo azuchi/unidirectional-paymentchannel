@@ -3,7 +3,7 @@ class PaymentChannel::Client
   include Concerns::BitcoinWrapper
 
   attr_reader :endpoint, :config
-  attr_accessor :channel_id, :server_pubkey, :client_key, :op_tx_redeem
+  attr_accessor :channel_id, :server_pubkey, :client_key
 
   def initialize(config: nil, endpoint: 'http://localhost:3000/payment_channels', client_key: Bitcoin::Key.generate)
     @endpoint = endpoint
@@ -29,10 +29,9 @@ class PaymentChannel::Client
   # create opening transaction（とりあえず原資となるBTCは送られているものとする）
   def create_opening_tx(amount)
     p2sh_script, redeem_script =  Bitcoin::Script.to_p2sh_multisig_script(2, server_pubkey, client_key.pub)
-    self.op_tx_redeem = redeem_script
     multisig_addr = Bitcoin::Script.new(p2sh_script).get_p2sh_address
     tx = oa_api.send_bitcoin(client_key.addr, amount, multisig_addr, 0, 'signed') # regtestなので手数料は考えない
-    tx
+    [tx, redeem_script]
   end
 
   # create refund tx
@@ -44,11 +43,22 @@ class PaymentChannel::Client
   end
 
   # request server to sign refund transaction
-  def request_sign_refund_tx(refund_tx)
-    RestClient.post("#{endpoint}/new_key", {}) do |respdata, request, result|
-      response = JSON.parse(respdata)
-      self.server_pubkey = response['pubkey']
+  def request_sign_refund_tx(refund_tx, redeem_script)
+    json = {tx: refund_tx.to_payload.bth, redeem_script: redeem_script.bth}.to_json
+    RestClient.post("#{channel_url}/sign_refund_tx", json) do |respdata, request, result|
+      tx = Bitcoin::Protocol::Tx.new(JSON.parse(respdata)['tx'].htb)
     end
+  end
+
+  # verify server signed tx
+  def verify_half_signed_refund_tx(opening_tx, refund_tx, redeem_script)
+    sig_hash = refund_tx.signature_hash_for_input(0, redeem_script)
+    script_sig = refund_tx.inputs[0].script_sig
+    script_sig = Bitcoin::Script.add_sig_to_multisig_script_sig(client_key.sign(sig_hash), script_sig)
+
+    script_sig = Bitcoin::Script.sort_p2sh_multisig_signatures(script_sig, sig_hash)
+    refund_tx.inputs[0].script_sig = script_sig
+    refund_tx.verify_input_signature(0, opening_tx)
   end
 
   # request server to sign and broadcast singed transaction
