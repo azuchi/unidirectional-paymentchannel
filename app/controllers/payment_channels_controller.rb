@@ -20,13 +20,7 @@ class PaymentChannelsController < ApplicationController
   def sign_refund_tx
     payload = jparams[:tx]
     redeem_script = jparams[:redeem_script].htb
-    tx = Bitcoin::Protocol::Tx.new(payload.htb)
-    sig_hash = tx.signature_hash_for_input(0, redeem_script)
-    key = Bitcoin::Key.new
-    key.priv = @payment_channel.key.privkey
-    script_sig = Bitcoin::Script.to_p2sh_multisig_script_sig(redeem_script)
-    script_sig = Bitcoin::Script.add_sig_to_multisig_script_sig(key.sign(sig_hash), script_sig)
-    tx.inputs[0].script_sig = script_sig
+    tx = @payment_channel.sign_to_refund_tx(Bitcoin::Protocol::Tx.new(payload.htb), redeem_script)
     render json: {tx: tx.to_payload.bth}
   end
 
