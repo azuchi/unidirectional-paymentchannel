@@ -12,14 +12,14 @@ class PaymentChannel::Client
     @client_key = client_key
   end
 
-  # open the payment channel
+  # サーバとChannelを開く
   def open
     RestClient.get("#{endpoint}/new", {}) do |respdata, request, result|
       self.channel_id = JSON.parse(respdata)['channel_id']
     end
   end
 
-  # request server public key
+  # サーバに公開鍵を要求
   def request_new_pubkey
     RestClient.post("#{channel_url}/new_key", {}) do |respdata, request, result|
       self.server_pubkey = JSON.parse(respdata)['pubkey']
@@ -34,7 +34,7 @@ class PaymentChannel::Client
     [tx, redeem_script]
   end
 
-  # create refund tx
+  # 払い戻し用トランザクションの作成
   def create_refund_tx(txid, vout, amount)
     tx = Bitcoin::Protocol::Tx.new
     tx.add_in(Bitcoin::Protocol::TxIn.from_hex_hash(txid, vout))
@@ -42,22 +42,23 @@ class PaymentChannel::Client
     tx
   end
 
-  # request server to sign refund transaction
+  # 払い戻し用トランザクションの作成をサーバに依頼
   def request_sign_refund_tx(refund_tx, redeem_script)
     json = {tx: refund_tx.to_payload.bth, redeem_script: redeem_script.bth}.to_json
     RestClient.post("#{channel_url}/sign_refund_tx", json) do |respdata, request, result|
-      tx = Bitcoin::Protocol::Tx.new(JSON.parse(respdata)['tx'].htb)
+      Bitcoin::Protocol::Tx.new(JSON.parse(respdata)['tx'].htb)
     end
   end
 
-  # verify server signed tx
+  # サーバ側で署名された払い戻し用トランザクションの署名を検証
   def verify_half_signed_refund_tx(opening_tx, refund_tx, redeem_script)
+    # サーバ側で署名されたデータに自分の署名を追加
     sig_hash = refund_tx.signature_hash_for_input(0, redeem_script)
     script_sig = refund_tx.inputs[0].script_sig
     script_sig = Bitcoin::Script.add_sig_to_multisig_script_sig(client_key.sign(sig_hash), script_sig)
-
     script_sig = Bitcoin::Script.sort_p2sh_multisig_signatures(script_sig, sig_hash)
     refund_tx.inputs[0].script_sig = script_sig
+    # 署名の検証（Opening Txはまだブロードキャストされておらず手元にある）
     refund_tx.verify_input_signature(0, opening_tx)
   end
 
