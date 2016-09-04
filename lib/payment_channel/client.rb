@@ -46,7 +46,11 @@ class PaymentChannel::Client
   def request_sign_refund_tx(refund_tx, redeem_script)
     json = {tx: refund_tx.to_payload.bth, redeem_script: redeem_script.bth}.to_json
     RestClient.post("#{channel_url}/sign_refund_tx", json) do |respdata, request, result|
-      Bitcoin::Protocol::Tx.new(JSON.parse(respdata)['tx'].htb)
+      if result.is_a?(Net::HTTPServerError)
+        raise StandardError.new(JSON.parse(respdata)['errors'])
+      else
+        Bitcoin::Protocol::Tx.new(JSON.parse(respdata)['tx'].htb)
+      end
     end
   end
 

@@ -1,4 +1,4 @@
-# unidirectional-paymentchannel
+# 単方向Payment Channelの簡易実装
 
 ## Configuration
 
@@ -9,3 +9,8 @@
 * database.yml
 * secrets.yml
 
+## ロジック
+
+### Server
+
+### Client

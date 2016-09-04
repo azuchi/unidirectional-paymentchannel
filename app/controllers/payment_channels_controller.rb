@@ -20,8 +20,11 @@ class PaymentChannelsController < ApplicationController
   def sign_refund_tx
     payload = jparams[:tx]
     redeem_script = jparams[:redeem_script].htb
-    tx = @payment_channel.sign_to_refund_tx(Bitcoin::Protocol::Tx.new(payload.htb), redeem_script)
-    render json: {tx: tx.to_payload.bth}
+    if @payment_channel.sign_to_refund_tx(Bitcoin::Protocol::Tx.new(payload.htb), redeem_script)
+      render json: {tx: @payment_channel.refund_tx.to_payload.bth}
+    else
+      render json: {errors: @payment_channel.errors.full_messages}, status: 500
+    end
   end
 
   private
