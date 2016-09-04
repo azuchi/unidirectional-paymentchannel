@@ -5,7 +5,7 @@ class Key < ApplicationRecord
 
   def to_btc_key
     key = Bitcoin::Key.new
-    key.priv = @payment_channel.key.privkey
+    key.priv = privkey
     key
   end
 

@@ -35,10 +35,12 @@ class PaymentChannel::Client
   end
 
   # 払い戻し用トランザクションの作成
-  def create_refund_tx(txid, vout, amount)
+  def create_refund_tx(txid, vout, amount, lock_time)
     tx = Bitcoin::Protocol::Tx.new
     tx.add_in(Bitcoin::Protocol::TxIn.from_hex_hash(txid, vout))
     tx.add_out(Bitcoin::Protocol::TxOut.value_to_address(amount, client_key.addr))
+    tx.in[0].sequence = [lock_time].pack("V") # 0xffffffffでなければなんでもOK
+    tx.lock_time = lock_time
     tx
   end
 

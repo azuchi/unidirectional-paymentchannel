@@ -14,8 +14,13 @@ class PaymentChannel < ApplicationRecord
     script_sig = Bitcoin::Script.to_p2sh_multisig_script_sig(redeem_script)
     script_sig = Bitcoin::Script.add_sig_to_multisig_script_sig(key.to_btc_key.sign(sig_hash), script_sig)
     refund_tx.inputs[0].script_sig = script_sig
-    self.refund_tx = refund_tx
+    self.refund_tx = refund_tx.to_payload.bth
     save
+  end
+
+  # 署名した払い戻し用トランザクションを取得
+  def signed_refund_tx
+    Bitcoin::Protocol::Tx.new(refund_tx.htb) if refund_tx
   end
 
   private
