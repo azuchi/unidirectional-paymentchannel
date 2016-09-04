@@ -25,4 +25,9 @@ module Concerns::BitcoinWrapper
     Time.at(oa_api.provider.getblock(block_hash)['time'])
   end
 
+  # トランザクションをブロードキャスト
+  def broadcast_tx(tx)
+    oa_api.provider.send_transaction(tx)
+  end
+
 end

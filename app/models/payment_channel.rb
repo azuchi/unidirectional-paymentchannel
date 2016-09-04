@@ -18,6 +18,14 @@ class PaymentChannel < ApplicationRecord
     save
   end
 
+  # OpeningTxをブロードキャストしチャンネルをオープンする
+  def open(opening_tx)
+    return false unless validate_opening_tx(opening_tx)
+    self.opening_txid = opening_tx.hash
+    broadcast_tx(opening_tx.to_payload.bth)
+    save
+  end
+
   # 署名した払い戻し用トランザクションを取得
   def signed_refund_tx
     Bitcoin::Protocol::Tx.new(refund_tx.htb) if refund_tx
@@ -32,6 +40,15 @@ class PaymentChannel < ApplicationRecord
   def validate_refund_tx(refund_tx)
     if refund_tx.is_final?(current_block_height, current_block_time)
       errors[:base] << 'refund tx is already final.'
+      return false
+    end
+    true
+  end
+
+  # Opening TxがこのChannelの払い戻し用トランザクションの入力か検証
+  def validate_opening_tx(opening_tx)
+    if signed_refund_tx.in[0].previous_output != opening_tx.hash
+      errors[:base] << 'opening tx does not correspond to refund tx.'
       return false
     end
     true

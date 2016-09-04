@@ -30,7 +30,7 @@ class PaymentChannel::Client
   def create_opening_tx(amount)
     p2sh_script, redeem_script =  Bitcoin::Script.to_p2sh_multisig_script(2, server_pubkey, client_key.pub)
     multisig_addr = Bitcoin::Script.new(p2sh_script).get_p2sh_address
-    tx = oa_api.send_bitcoin(client_key.addr, amount, multisig_addr, 0, 'signed') # regtestなので手数料は考えない
+    tx = oa_api.send_bitcoin(client_key.addr, amount, multisig_addr, nil, 'signed')
     [tx, redeem_script]
   end
 
@@ -70,7 +70,14 @@ class PaymentChannel::Client
 
   # request server to sign and broadcast singed transaction
   def send_opening_tx(opening_tx)
-
+    json = {tx: opening_tx.to_payload.bth}.to_json
+    RestClient.post("#{channel_url}/opening_tx", json) do |respdata, request, result|
+      if result.is_a?(Net::HTTPServerError)
+        raise StandardError.new(JSON.parse(respdata)['errors'])
+      else
+        JSON.parse(respdata)['txid']
+      end
+    end
   end
 
   # create commitment transaction and send it to server

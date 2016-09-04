@@ -27,6 +27,16 @@ class PaymentChannelsController < ApplicationController
     end
   end
 
+  # OpeningTxを受け取りブロードキャストする
+  def opening_tx
+    payload = jparams[:tx]
+    if @payment_channel.open(Bitcoin::Protocol::Tx.new(payload.htb))
+      render json: {txid: @payment_channel.opening_txid}
+    else
+      render json: {errors: @payment_channel.errors.full_messages}, status: 500
+    end
+  end
+
   private
   def load_channel
     @payment_channel = PaymentChannel.channel_id(params[:id]).first

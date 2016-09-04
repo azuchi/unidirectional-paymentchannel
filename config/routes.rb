@@ -5,6 +5,7 @@ Rails.application.routes.draw do
     member do
       post :new_key
       post :sign_refund_tx
+      post :opening_tx
     end
   end
 
