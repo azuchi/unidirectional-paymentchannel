@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160904051357) do
+ActiveRecord::Schema.define(version: 20160904055856) do
 
   create_table "keys", force: :cascade do |t|
     t.string   "pubkey",     null: false
@@ -20,12 +20,13 @@ ActiveRecord::Schema.define(version: 20160904051357) do
   end
 
   create_table "payment_channels", force: :cascade do |t|
-    t.string   "channel_id",                      null: false
+    t.string   "channel_id",                       null: false
     t.integer  "key_id"
-    t.datetime "created_at",                      null: false
-    t.datetime "updated_at",                      null: false
-    t.text     "refund_tx",    limit: 4294967295
+    t.datetime "created_at",                       null: false
+    t.datetime "updated_at",                       null: false
+    t.text     "refund_tx",     limit: 4294967295
     t.string   "opening_txid"
+    t.text     "commitment_tx", limit: 4294967295
     t.index ["key_id"], name: "index_payment_channels_on_key_id"
   end
 
