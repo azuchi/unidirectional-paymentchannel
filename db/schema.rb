@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160904064700) do
+ActiveRecord::Schema.define(version: 20160905013803) do
 
   create_table "keys", force: :cascade do |t|
     t.string   "pubkey",     null: false
@@ -28,6 +28,7 @@ ActiveRecord::Schema.define(version: 20160904064700) do
     t.string   "opening_txid"
     t.text     "commitment_tx", limit: 4294967295
     t.string   "redeem_script"
+    t.string   "close_txid"
     t.index ["key_id"], name: "index_payment_channels_on_key_id"
   end
 

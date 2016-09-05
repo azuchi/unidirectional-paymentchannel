@@ -52,6 +52,15 @@ class PaymentChannelsController < ApplicationController
     end
   end
 
+  # PaymentChannelのクローズ
+  def close
+    if @payment_channel.close
+      render json: {txid: @payment_channel.close_txid}
+    else
+      render json: {errors: @payment_channel.errors.full_messages}, status: 500
+    end
+  end
+
   private
   def load_channel
     @payment_channel = PaymentChannel.channel_id(params[:id]).first

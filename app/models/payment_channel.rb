@@ -40,6 +40,12 @@ class PaymentChannel < ApplicationRecord
     Bitcoin::Protocol::Tx.new(refund_tx.htb) if refund_tx
   end
 
+  # Channelをクローズする
+  def close
+    self.close_txid =broadcast_tx(commitment_tx)
+    save
+  end
+
   private
   def generate_channel_id
     self.channel_id = SecureRandom.uuid
@@ -77,7 +83,6 @@ class PaymentChannel < ApplicationRecord
       return false
     end
     # 署名の検証
-    puts "redeem_script = #{redeem_script}"
     sig_hash = tx.signature_hash_for_input(0, redeem_script.htb)
     script_sig = tx.in[0].script_sig
     script_sig = Bitcoin::Script.add_sig_to_multisig_script_sig(key.to_btc_key.sign(sig_hash), script_sig)

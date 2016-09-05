@@ -105,6 +105,17 @@ class PaymentChannel::Client
     end
   end
 
+  # Channelのクローズ
+  def close
+    RestClient.post("#{channel_url}/close", {}) do |respdata, request, result|
+      if result.is_a?(Net::HTTPServerError)
+        raise StandardError.new(JSON.parse(respdata)['errors'])
+      else
+        JSON.parse(respdata)['txid']
+      end
+    end
+  end
+
   private
   def btc_config
     @config

@@ -7,6 +7,7 @@ Rails.application.routes.draw do
       post :sign_refund_tx
       post :opening_tx
       post :commitment_tx
+      post :close
     end
   end
 
