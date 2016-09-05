@@ -76,9 +76,9 @@ class PaymentChannel < ApplicationRecord
       errors[:base] << 'commitment tx does not correspond to opening tx.'
       return false
     end
-    current_servers_value = servers_value(Bitcoin::Protocol::Tx.new(commitment_tx.htb))
+    current_servers_value = commitment_tx.nil? ? 0 : servers_value(Bitcoin::Protocol::Tx.new(commitment_tx.htb))
     next_servers_value = servers_value(tx)
-    if current_servers_value >= next_servers_value # 更新対象のTxのサーバへのBTC量が前回より少なければエラー
+    if current_servers_value > next_servers_value # 更新対象のTxのサーバへのBTC量が前回より少なければエラー
       errors[:base] << 'commitment tx output has not enough bitcoin. '
       return false
     end
