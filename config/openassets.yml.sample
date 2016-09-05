@@ -1,0 +1,12 @@
+bitcoin:
+  dust_limit: 600
+  network: 'regtest'
+  provier: 'bitcoind'
+  cache: "tmp/cache.db"
+  min_confirmation: 0
+  rpc:
+    schema: 'http'
+    port: '18332'
+    host: 'localhost'
+    user: 'xxx'
+    password: 'xxx'
