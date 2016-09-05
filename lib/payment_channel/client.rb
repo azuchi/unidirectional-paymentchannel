@@ -1,15 +1,18 @@
+require 'rest-client'
+
 class PaymentChannel::Client
 
   include Concerns::BitcoinWrapper
 
   attr_reader :endpoint, :config
-  attr_accessor :channel_id, :server_pubkey, :client_key
+  attr_accessor :channel_id, :server_pubkey, :client_key, :fee
 
-  def initialize(config: nil, endpoint: 'http://localhost:3000/payment_channels', client_key: Bitcoin::Key.generate)
+  def initialize(config: nil, endpoint: 'http://localhost:3000/payment_channels', client_key: Bitcoin::Key.generate, fee: 10000)
     @endpoint = endpoint
     config = oa_config unless config
     @config = config
     @client_key = client_key
+    @fee = fee
   end
 
   # サーバとChannelを開く
@@ -30,15 +33,15 @@ class PaymentChannel::Client
   def create_opening_tx(amount)
     p2sh_script, redeem_script =  Bitcoin::Script.to_p2sh_multisig_script(2, server_pubkey, client_key.pub)
     multisig_addr = Bitcoin::Script.new(p2sh_script).get_p2sh_address
-    tx = oa_api.send_bitcoin(client_key.addr, amount, multisig_addr, nil, 'signed')
-    [tx, redeem_script]
+    tx = oa_api.send_bitcoin(client_key.addr, amount, multisig_addr, fee, 'signed')
+    [tx, redeem_script, multisig_addr]
   end
 
   # 払い戻し用トランザクションの作成
   def create_refund_tx(txid, vout, amount, lock_time)
     tx = Bitcoin::Protocol::Tx.new
     tx.add_in(Bitcoin::Protocol::TxIn.from_hex_hash(txid, vout))
-    tx.add_out(Bitcoin::Protocol::TxOut.value_to_address(amount, client_key.addr))
+    tx.add_out(Bitcoin::Protocol::TxOut.value_to_address(amount - fee, client_key.addr))
     tx.in[0].sequence = [lock_time].pack("V") # 0xffffffffでなければなんでもOK
     tx.lock_time = lock_time
     tx
@@ -68,7 +71,7 @@ class PaymentChannel::Client
     refund_tx.verify_input_signature(0, opening_tx)
   end
 
-  # request server to sign and broadcast singed transaction
+  # 署名済みのOpening Txをサーバに送ってブロードキャストしてもらう
   def send_opening_tx(opening_tx)
     json = {tx: opening_tx.to_payload.bth}.to_json
     RestClient.post("#{channel_url}/opening_tx", json) do |respdata, request, result|
@@ -80,9 +83,26 @@ class PaymentChannel::Client
     end
   end
 
-  # create commitment transaction and send it to server
-  def create_commitment_tx(opening_tx, client_btc)
-
+  # オフチェーンでやりとりするCommitment Txを作成してサーバに送る
+  def create_commitment_tx(opening_tx, vout, client_amount, redeem_script)
+    locked_amount = opening_tx.out[vout].value
+    tx = Bitcoin::Protocol::Tx.new
+    tx.add_in(Bitcoin::Protocol::TxIn.from_hex_hash(opening_tx.hash, vout))
+    tx.add_out(Bitcoin::Protocol::TxOut.value_to_address(client_amount, client_key.addr))
+    tx.add_out(Bitcoin::Protocol::TxOut.value_to_address(
+        locked_amount - (client_amount + fee), pubkey_to_address(server_pubkey)))
+    sig_hash = tx.signature_hash_for_input(0, redeem_script)
+    script_sig = Bitcoin::Script.to_p2sh_multisig_script_sig(redeem_script)
+    script_sig = Bitcoin::Script.add_sig_to_multisig_script_sig(client_key.sign(sig_hash), script_sig)
+    tx.in[0].script_sig = script_sig
+    json = {tx: tx.to_payload.bth}.to_json
+    RestClient.post("#{channel_url}/commitment_tx", json) do |respdata, request, result|
+      if result.is_a?(Net::HTTPServerError)
+        raise StandardError.new(JSON.parse(respdata)['errors'])
+      else
+        JSON.parse(respdata)['txid']
+      end
+    end
   end
 
   private

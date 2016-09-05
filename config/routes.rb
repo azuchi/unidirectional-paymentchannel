@@ -6,6 +6,7 @@ Rails.application.routes.draw do
       post :new_key
       post :sign_refund_tx
       post :opening_tx
+      post :commitment_tx
     end
   end
 

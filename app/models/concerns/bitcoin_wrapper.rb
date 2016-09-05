@@ -30,4 +30,8 @@ module Concerns::BitcoinWrapper
     oa_api.provider.send_transaction(tx)
   end
 
+  # 対象のtxidのrawトランザクションを取得
+  def raw_transaction(txid)
+    oa_api.provider.get_transaction(txid)
+  end
 end
